@@ -1,5 +1,6 @@
 mod serialize;
 mod macho;
+mod commands;
 
 use std::env::args;
 use env_logger::{init, Builder};

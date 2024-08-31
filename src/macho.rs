@@ -2,7 +2,7 @@ use std::io::{Error, Read};
 use std::mem::transmute;
 use log::info;
 use crate::serialize::FromRead;
-
+use crate::commands::read_command;
 
 struct Header {
     cpu_type: u32,
@@ -32,7 +32,7 @@ pub fn read_macho(read: &mut dyn Read, is64: bool) {
     info!("CPU Subtype    : 0x{:08x}", header.cpu_subtype);
     info!("File Type      : 0x{:08x}", header.file_type);
     info!("Commands count : {}",       header.load_commands_count);
-    info!("Commands size  : 0x{:08x}", header.size_load_command);
+    info!("Commands size  : {}",       header.size_load_command);
     info!("Flags          : 0x{:08x}", header.flags);
 
     if is64 {
@@ -44,25 +44,4 @@ pub fn read_macho(read: &mut dyn Read, is64: bool) {
     for _ in 0..header.load_commands_count {
         read_command(read);
     }
-}
-
-struct LoadCommand {
-    cmd_type: u32,
-    size: u32
-}
-
-impl FromRead for LoadCommand {
-    fn read(read: &mut dyn Read) -> Result<Box<Self>, Error> {
-        let mut buf = [0u8; size_of::<Self>()];
-        match read.read_exact(&mut buf) {
-            Ok(_) => unsafe { Ok(Box::new(transmute(buf))) }
-            Err(err) => Err(err)
-        }
-    }
-}
-
-fn read_command(read: &mut dyn Read) {
-    let cmd = LoadCommand::read(read).unwrap();
-    info!("Command : 0x{:08x}", cmd.cmd_type);
-    read.read_exact(&mut vec![0u8; cmd.size as usize - size_of::<LoadCommand>()]).unwrap()
 }
