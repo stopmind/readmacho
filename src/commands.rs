@@ -24,6 +24,7 @@ pub fn read_command(read: &mut dyn Read) {
     match cmd.cmd_type {
         0x00000001 => read_segment32(read),
         0x00000019 => read_segment64(read),
+        0x00000028 => read_entry(read),
         _ => {
             read.read_exact(&mut vec![0u8; cmd.size as usize - size_of::<LoadCommand>()]).unwrap();
 
@@ -34,6 +35,28 @@ pub fn read_command(read: &mut dyn Read) {
             }
         }
     }
+}
+
+struct EntryPoint {
+    address_location: u64,
+    stack_size: u64
+}
+
+impl FromRead for EntryPoint {
+    fn read(read: &mut dyn Read) -> Result<Box<Self>, Error> {
+        let mut buf = [0u8; size_of::<Self>()];
+        match read.read_exact(&mut buf) {
+            Ok(_) => unsafe { Ok(Box::new(transmute(buf))) }
+            Err(err) => Err(err)
+        }
+    }
+}
+
+fn read_entry(read: &mut dyn Read) {
+    let entry = EntryPoint::read(read).unwrap();
+    info!("Program entry.");
+    info!("Address location : 0x{:16x}", entry.address_location);
+    info!("Stack size       : {}", entry.stack_size);
 }
 
 struct SegmentCommand32 {
